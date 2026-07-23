@@ -1,0 +1,28 @@
+# --- Python / FastAPI backend ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.db
+*.sqlite3
+.env
+.pytest_cache/
+
+# --- Node / React (admin-portal) ---
+node_modules/
+dist/
+build/
+.vercel/
+
+# --- Expo / React Native (mobile-app) ---
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# --- General ---
+.DS_Store
+*.log

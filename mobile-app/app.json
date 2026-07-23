@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "EHS Connect",
+    "slug": "ehs-connect",
+    "scheme": "ehsconnect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.ehsconnect.residentapp"
+    },
+    "android": {
+      "package": "org.ehsconnect.residentapp",
+      "adaptiveIcon": {
+        "backgroundColor": "#10B981",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static",
+      "name": "EHS Connect",
+      "shortName": "EHS Connect",
+      "themeColor": "#10B981",
+      "backgroundColor": "#FFFFFF",
+      "display": "standalone"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
