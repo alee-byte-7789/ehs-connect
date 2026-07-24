@@ -1,0 +1,24 @@
+{
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": { "includeFiles": "backend/**" }
+    },
+    {
+      "src": "mobile-app/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    }
+  ],
+  "routes": [
+    { "src": "/health", "dest": "api/index.py" },
+    { "src": "/api/(.*)", "dest": "api/index.py" },
+    { "src": "/_expo/(.*)", "dest": "/mobile-app/dist/_expo/$1" },
+    { "src": "/assets/(.*)", "dest": "/mobile-app/dist/assets/$1" },
+    { "src": "/favicon.ico", "dest": "/mobile-app/dist/favicon.ico" },
+    { "src": "/$", "dest": "/mobile-app/dist/index.html" },
+    { "src": "/([^.]+)$", "dest": "/mobile-app/dist/$1.html" },
+    { "src": "/(.*)", "dest": "/mobile-app/dist/$1" }
+  ]
+}

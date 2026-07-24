@@ -109,8 +109,8 @@ EHS-Connect/
 | Database (dev) | SQLite |
 | Push Notifications | Firebase Cloud Messaging |
 | Email | Zoho Mail SMTP |
-| Hosting — Frontend(s) | Vercel |
-| Hosting — Backend | Render (free tier, kept warm via a keep-alive ping — see Section 18) |
+| Hosting — Backend | Vercel (Python serverless functions, unified with the frontend — see Section 18) |
+| Hosting — Frontend(s) | Vercel (same project as backend — one deployment serves both) |
 | Hosting — DB | Supabase PostgreSQL |
 
 ---
@@ -481,39 +481,64 @@ This is flagged rather than silently left, per the project's own "roadmap must r
 - Chatbot
 
 ## 18. Deployment Plan (high-level, detailed in Module 11)
-- **Backend:** Render (free tier, kept warm with a keep-alive ping every 10 minutes), PostgreSQL via Supabase, environment-based config (dev = SQLite, prod = Postgres), Alembic migrations run on deploy
-- **Admin Portal:** Vercel, built as a PWA so it can also be "installed" on desktop/tablet
+- **Backend + Admin-facing web frontend:** one unified Vercel project — FastAPI as Python serverless functions under `/api/*`, Expo's web export served as static files for everything else, same domain (see status update below for why this replaced the earlier Render plan)
+- **Database:** PostgreSQL via Supabase (session pooler connection string, suited to serverless's short-lived connections)
 - **Mobile App:** Expo EAS Build → TestFlight (iOS) and Play Store internal testing (Android) before public release
 - **Secrets:** JWT secret, Zoho SMTP credentials, FCM service account, DB URL — all via environment variables, never committed
 
-**Status update (pulled forward from Module 11, ahead of schedule):** Ali
-opted to stand up a shared Supabase + Render backend now, before Module 5,
-so the Admin Portal can be built and tested against a real hosted backend
-instead of localhost from day one. Railway was considered first but
-dropped once we confirmed its free trial is genuinely time/credit-limited
-(30 days or $5, then paid); Render's free tier is $0 indefinitely, with
-the tradeoff of sleeping after 15 minutes idle — solved with a keep-alive
-ping (see `docs/DEPLOYMENT_SETUP.md`), which Fly.io's now-discontinued
-free tier and Oracle Cloud's self-managed VMs were also considered against
-before settling on this as the simplest zero-cost option. The code side is
-done and verified:
-- `requirements.txt` now includes the `psycopg` v3 Postgres driver
-- `app/core/config.py` auto-normalizes Supabase's `postgres://`/`postgresql://`
-  connection string to the driver's required scheme — paste it in unedited
-- `cors_allow_origins` now accepts a plain comma-separated string (easier
-  to paste into a dashboard env var UI than a JSON array)
-- `backend/render.yaml` added — Render reads this to auto-configure the
-  build/start commands and root directory
-- Full step-by-step account setup, including the keep-alive ping options:
-  `docs/DEPLOYMENT_SETUP.md`
+**Status update (pulled forward from Module 11, ahead of schedule):**
+This went through three iterations before landing here, each for a
+concrete reason:
+1. **Railway first** — dropped once we confirmed its free trial is
+   genuinely time/credit-limited (30 days or $5, then paid).
+2. **Render second** — genuinely free indefinitely, but hit a real wall:
+   Render requires card verification (a $1 refundable authorization, not a
+   charge) for many new accounts as anti-abuse policy, and Ali didn't have
+   a usable card at the time.
+3. **Vercel, unified with the frontend — final decision.** Vercel's Hobby
+   plan needs no card at all and has much faster cold starts (~1-2s vs
+   Render's 30-60s). Since Vercel doesn't run a persistent server the way
+   Render/Railway do, the backend was adapted to serverless: `api/index.py`
+   wraps the existing FastAPI app unchanged, and `mobile-app`'s Expo web
+   export is served as the static frontend — both under one Vercel
+   project, one domain.
+
+The code side is done and verified:
+- `vercel.json` (repo root) — defines both builds and the routing between
+  them, including an explicit `/health` rule (this doesn't start with
+  `/api/`, so without that rule it would have 404'd against the static
+  frontend instead of reaching the backend — caught and fixed, not left
+  as a latent bug)
+- `api/index.py` — thin adapter importing the real FastAPI app; tested
+  directly with a real `TestClient` exactly as Vercel's runtime would use
+  it — `GET /health` returned `200`, `POST /api/v1/auth/register` wrote a
+  real row and returned `201`
+- `requirements.txt` (repo root, duplicate of `backend/requirements.txt` —
+  Vercel's Python builder needs it there; **must be kept in sync manually**)
+- `app/core/database.py` — switches to `NullPool` when Vercel's `VERCEL`
+  env var is present (serverless functions shouldn't hold their own local
+  connection pool alongside Supabase's external one); verified directly
+  that the pool class actually changes with/without that env var
+- `mobile-app/package.json`'s `vercel-build` script — verified it actually
+  produces `dist/` with all 5 routes, matching what `@vercel/static-build` expects
+- Full step-by-step account setup: `docs/DEPLOYMENT_SETUP.md`
 
 **Not yet done — needs Ali's browser, not code:** creating the actual
-Supabase project (done) and Render service (pending), pushing the repo to
-GitHub (Render deploys from a repo, not a local folder), and setting up
-the keep-alive ping. The regression tests confirming the config changes
-were run against local SQLite only, since this sandbox has no network path
-to Supabase/Render/GitHub; the real Postgres connection and Render deploy
-still need to be exercised once the account and repo exist.
+Vercel project and connecting the (already-pushed) GitHub repo, setting
+the environment variables, and running the first real deploy. Migrations
+against the real Supabase database also need to be run manually from a
+local machine now (documented in the deployment guide) — a genuine
+workflow difference from Render/Railway's "runs automatically on deploy"
+model, since Vercel's serverless functions have no persistent start
+command to hook into.
+
+**Honest caveat:** this sandbox has no network path to Vercel, GitHub, or
+Supabase, so every piece was tested individually and end-to-end as far as
+this environment allows — but the actual combined Vercel build (two
+builders, real routing, a real serverless-to-Supabase connection) hasn't
+been exercised by a live deploy yet. This is a newer, less well-trodden
+setup than Render's single-service model, so there's a real chance the
+first deploy surfaces something.
 
 ## 19. Testing Checklist (executed in Module 10)
 - [ ] Backend unit tests: auth, complaint state machine, ID generation logic

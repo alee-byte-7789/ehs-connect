@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — must match PROJECT_ROADMAP.md Section 5 and
+ * mobile-app/lib/theme.ts exactly, so "one design system, two apps" holds.
+ */
+@theme {
+  --color-primary: #10B981;
+  --color-primary-dark: #059669;
+  --color-surface: #F5F6F7;
+  --color-border: #E5E7EB;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-danger: #EF4444;
+
+  --color-status-pending: #F59E0B;
+  --color-status-accepted: #3B82F6;
+  --color-status-assigned: #6366F1;
+  --color-status-in-progress: #06B6D4;
+  --color-status-resolved: #10B981;
+  --color-status-reopened: #EF4444;
+  --color-status-closed: #6B7280;
+}
+
+body {
+  @apply bg-white text-[color:var(--color-text-primary)] antialiased;
+}

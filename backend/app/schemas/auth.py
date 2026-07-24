@@ -1,18 +1,26 @@
 """
 Auth-related Pydantic schemas.
 
-`RegisterRequest` encodes the exact branching decision tree from
-PROJECT_ROADMAP.md's registration flow:
+`RegisterRequest` encodes the registration flow's two independent facts
+about a resident:
 
-    Are you an AWC Employee?
-      YES -> collect employee_number                      (resident_type = OWNER)
-      NO  -> Are you a Tenant?
-               YES -> collect owner_house_number, owner_name,
-                      owner_cnic, owner_mobile_number       (resident_type = TENANT)
-               NO  -> no extra fields                       (resident_type = OWNER)
+    Are you an AWC Employee?           (affects: employee_number required)
+      YES -> collect employee_number
+      NO  -> employee_number omitted
 
-`resident_type` is derived server-side from the two boolean flags rather
-than accepted directly from the client, so a client can't submit
+    Are you a tenant?                  (affects: resident_type + owner fields)
+      YES -> collect owner_house_number, owner_name,
+             owner_cnic, owner_mobile_number   (resident_type = TENANT)
+      NO  -> no extra fields                    (resident_type = OWNER)
+
+These two questions are independent — an AWC employee can also be a
+tenant (e.g. an employee who rents rather than owns their house). Earlier
+drafts of this schema incorrectly treated "employee" as implying "owner";
+that was a real modeling mistake, not a deliberate business rule, and has
+been removed.
+
+`resident_type` is derived server-side from `is_tenant` alone, rather than
+accepted directly from the client, so a client can't submit
 `resident_type=owner` while also sending tenant-only fields (or vice versa)
 and end up in an inconsistent state.
 """
@@ -44,9 +52,6 @@ class RegisterRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_branches(self) -> "RegisterRequest":
-        if self.is_awc_employee and self.is_tenant:
-            raise ValueError("An AWC employee registers as an owner; is_tenant must be false.")
-
         if self.is_awc_employee and not self.employee_number:
             raise ValueError("employee_number is required when is_awc_employee is true.")
 

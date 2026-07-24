@@ -15,11 +15,12 @@ import { useTheme } from "../lib/use-theme";
 
 /**
  * Mirrors backend/app/schemas/auth.py's RegisterRequest validator exactly:
- * - is_awc_employee=true requires employee_number, and forbids is_tenant=true
+ * - is_awc_employee=true requires employee_number
  * - is_tenant=true requires all four owner_* fields
- * The UI only ever shows the fields relevant to the current branch, so most
- * of the backend's "must be omitted" rules are structurally impossible here
- * — but the required-field rules still need enforcing before submit.
+ * These two questions are independent — an AWC employee can also be a
+ * tenant (e.g. an employee who rents rather than owns). Both questions are
+ * always asked; the fields shown depend on each answer independently, not
+ * on each other.
  */
 const schema = z
   .object({
@@ -89,13 +90,15 @@ export default function RegisterScreen() {
   const values = watch();
 
   const goNext = async () => {
+    const step2Fields: (keyof FormValues)[] = [
+      ...(isEmployee ? (["employee_number"] as const) : []),
+      ...(isTenant
+        ? (["owner_house_number", "owner_name", "owner_cnic", "owner_mobile_number"] as const)
+        : []),
+    ];
     const fieldsForStep: (keyof FormValues)[][] = [
       ["full_name", "house_number", "mobile_number", "email", "password"],
-      isEmployee
-        ? ["employee_number"]
-        : isTenant
-        ? ["owner_house_number", "owner_name", "owner_cnic", "owner_mobile_number"]
-        : [],
+      step2Fields,
     ];
     const valid = await trigger(fieldsForStep[step]);
     if (valid) setStep((s) => s + 1);
@@ -198,18 +201,16 @@ export default function RegisterScreen() {
             />
           )}
 
-          {!isEmployee && (
-            <>
-              <QuestionToggle
-                question="Are you a tenant?"
-                control={control}
-                name="is_tenant"
-              />
+          <QuestionToggle
+            question="Are you a tenant?"
+            control={control}
+            name="is_tenant"
+          />
 
-              {isTenant && (
-                <>
-                  <Controller
-                    control={control}
+          {isTenant && (
+            <>
+              <Controller
+                control={control}
                     name="owner_house_number"
                     render={({ field }) => (
                       <AppTextField label="Owner's house number" value={field.value} onChangeText={field.onChange} error={errors.owner_house_number?.message} />
@@ -238,8 +239,6 @@ export default function RegisterScreen() {
                   />
                 </>
               )}
-            </>
-          )}
         </>
       )}
 
@@ -250,7 +249,7 @@ export default function RegisterScreen() {
           <ReviewRow label="Mobile" value={values.mobile_number} theme={theme} />
           <ReviewRow label="AWC employee" value={values.is_awc_employee ? "Yes" : "No"} theme={theme} />
           {values.is_awc_employee && <ReviewRow label="Employee #" value={values.employee_number} theme={theme} />}
-          {!values.is_awc_employee && <ReviewRow label="Tenant" value={values.is_tenant ? "Yes" : "No"} theme={theme} />}
+          <ReviewRow label="Tenant" value={values.is_tenant ? "Yes" : "No"} theme={theme} />
           {values.is_tenant && <ReviewRow label="Owner" value={values.owner_name} theme={theme} />}
         </View>
       )}
