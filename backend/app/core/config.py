@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     def cors_allow_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_allow_origins.split(",") if origin.strip()]
 
+    # --- One-time remote migration trigger ---
+    # See app/api/v1/ops.py. Deliberately has NO default — if this isn't
+    # explicitly set in the environment, the /ops/migrate endpoint refuses
+    # to run anything, so there's no accidental unprotected door into
+    # running migrations against the production database.
+    migration_secret: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:
