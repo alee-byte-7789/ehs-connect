@@ -13,6 +13,10 @@
   ],
   "routes": [
     { "src": "/health", "dest": "api/index.py" },
+    { "src": "/docs", "dest": "api/index.py" },
+    { "src": "/docs/oauth2-redirect", "dest": "api/index.py" },
+    { "src": "/redoc", "dest": "api/index.py" },
+    { "src": "/openapi.json", "dest": "api/index.py" },
     { "src": "/api/(.*)", "dest": "api/index.py" },
     { "src": "/_expo/(.*)", "dest": "/mobile-app/dist/_expo/$1" },
     { "src": "/assets/(.*)", "dest": "/mobile-app/dist/assets/$1" },
