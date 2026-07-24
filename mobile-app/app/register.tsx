@@ -107,6 +107,7 @@ export default function RegisterScreen() {
   const onSubmit = async (data: FormValues) => {
     setServerError(null);
     setSubmitting(true);
+    let registered = false;
     try {
       await registerResident({
         full_name: data.full_name,
@@ -122,11 +123,19 @@ export default function RegisterScreen() {
         owner_cnic: data.is_tenant ? data.owner_cnic : undefined,
         owner_mobile_number: data.is_tenant ? data.owner_mobile_number : undefined,
       });
-      router.replace("/pending");
+      registered = true;
     } catch (err) {
       setServerError(extractApiErrorMessage(err, "Registration failed. Please check your details."));
     } finally {
       setSubmitting(false);
+    }
+    // Deliberately outside the try/catch above: registration already
+    // succeeded at this point (the resident row exists in the DB), so a
+    // problem with navigation itself must never be mislabeled as a
+    // registration failure — that would tell the user their data was
+    // lost when it wasn't.
+    if (registered) {
+      router.replace("/pending");
     }
   };
 

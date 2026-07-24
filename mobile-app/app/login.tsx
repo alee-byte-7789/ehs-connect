@@ -38,13 +38,17 @@ export default function LoginScreen() {
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
     setSubmitting(true);
+    let loggedIn = false;
     try {
       await login(values);
-      router.replace("/");
+      loggedIn = true;
     } catch (err) {
       setServerError(extractApiErrorMessage(err, "Login failed. Check your credentials."));
     } finally {
       setSubmitting(false);
+    }
+    if (loggedIn) {
+      router.replace("/");
     }
   };
 
